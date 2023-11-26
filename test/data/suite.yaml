@@ -1,0 +1,36 @@
+- name: app1
+  group: test
+  rolloutPhase: 1
+
+- name: app2
+  group: test
+  rolloutPhase: 1
+
+- name: app3
+  group: test
+  rolloutPhase: 1
+
+- name: app1
+  group: test
+  rolloutPhase: 2
+
+- name: app2
+  group: test
+  rolloutPhase: 2
+
+- name: app3
+  group: test
+  rolloutPhase: 2
+
+- name: app1
+  group: test
+  rolloutPhase: 3
+
+- name: app2
+  group: test
+  rolloutPhase: 3
+
+- name: app3
+  group: test
+  rolloutPhase: 3
+   

@@ -1,0 +1,11 @@
+- name: app1
+  version: 1.1.1
+  helmChart: mychartfromfile-1.0.0.tgz
+
+- name: app2
+  version: 2.2.2
+  helmChart: mychartfromfile-1.0.0.tgz
+
+- name: app3
+  version: 3.3.3
+  helmChart: mychartfromfile-1.0.0.tgz
