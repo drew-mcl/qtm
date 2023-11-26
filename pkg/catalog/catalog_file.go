@@ -13,7 +13,7 @@ type FileCatalog struct {
 	items    map[string]CatalogItem
 }
 
-func NewDataFileCatalog(filePath string) (*FileCatalog, error) {
+func NewFileCatalogSource(filePath string) (*FileCatalog, error) {
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
@@ -37,9 +37,9 @@ func NewDataFileCatalog(filePath string) (*FileCatalog, error) {
 	}, nil
 }
 
-func (fc *FileCatalog) FetchData(appName, appGroup string) (CatalogItem, error) {
+func (fc *FileCatalog) FetchData(appName, appGroup string) (*CatalogItem, error) {
 	if item, ok := fc.items[appName]; ok {
-		return item, nil
+		return &item, nil
 	}
-	return CatalogItem{}, errors.New("app not found")
+	return nil, errors.New("app not found")
 }

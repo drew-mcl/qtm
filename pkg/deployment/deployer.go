@@ -1,6 +1,9 @@
 package deployment
 
-import "context"
+import (
+	"context"
+	"qtm/pkg/suite"
+)
 
 // DeploymentResult represents the result of a deployment attempt
 type DeploymentResult struct {
@@ -22,4 +25,5 @@ const (
 // Deployer defines the interface for deploying applications
 type Deployer interface {
 	Deploy(ctx context.Context, appName string, appGroup string, phase int) DeploymentResult
+	FetchSuite() (suite.Suite, error)
 }

@@ -8,7 +8,19 @@ import (
 	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-func GetCatalogItem(appName, appGroup string) (*CatalogItem, error) {
+type RemoteEtcdSource struct {
+	Client *clientv3.Client
+	Prefix string
+}
+
+func NewRemoteCatalogSource(client *clientv3.Client, prefix string) *RemoteEtcdSource {
+	return &RemoteEtcdSource{
+		Client: client,
+		Prefix: prefix,
+	}
+}
+
+func (res *RemoteEtcdSource) FetchData(appName, appGroup string) (*CatalogItem, error) {
 	// Connect to etcd
 	cli, err := clientv3.New(clientv3.Config{
 		Endpoints: []string{"localhost:2379"}, // Replace with your etcd endpoints

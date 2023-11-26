@@ -3,6 +3,7 @@ package deployment
 import (
 	"context"
 	"qtm/pkg/catalog"
+	"qtm/pkg/suite"
 	"sync"
 	"time"
 
@@ -16,17 +17,19 @@ type MockDeployer struct {
 	mu                sync.Mutex
 	logger            *zap.Logger
 	deployedApps      map[string]bool
-	catalog           catalog.CatalogSource
+	catalogSource     catalog.CatalogSource
+	suiteSource       suite.SuiteSource
 	sleep             int
 }
 
 // NewMockDeployer creates a new MockDeployer instance
-func NewMockDeployer(logger *zap.Logger, cs catalog.CatalogSource, sleep int) *MockDeployer {
+func NewMockDeployer(logger *zap.Logger, cs catalog.CatalogSource, ss suite.SuiteSource, sleep int) *MockDeployer {
 	return &MockDeployer{
 		deploymentResults: make(map[string]map[int]DeploymentResult),
 		deployedApps:      make(map[string]bool),
 		logger:            logger,
-		catalog:           cs,
+		catalogSource:     cs,
+		suiteSource:       ss,
 		sleep:             sleep,
 	}
 }
@@ -64,7 +67,7 @@ func (m *MockDeployer) Deploy(ctx context.Context, appName string, appGroup stri
 	//}
 
 	// Fetch version for the app
-	data, err := m.catalog.FetchData(appName, appGroup)
+	data, err := m.catalogSource.FetchData(appName, appGroup)
 	if err != nil {
 		return DeploymentResult{AppID: appName, Phase: phase, Status: Fail, ErrorMsg: err.Error()}
 	}
@@ -95,4 +98,9 @@ func (m *MockDeployer) checkPredefinedResult(appID string, phase int) (Deploymen
 		}
 	}
 	return DeploymentResult{}, false
+}
+
+// FetchSuite returns the suite data
+func (m *MockDeployer) FetchSuite() (suite.Suite, error) {
+	return m.suiteSource.FetchSuite()
 }

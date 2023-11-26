@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/spf13/cobra"
+	clientv3 "go.etcd.io/etcd/client/v3"
+	"go.uber.org/zap"
 )
 
 type RollbackOptions struct {
@@ -12,7 +14,7 @@ type RollbackOptions struct {
 	StopAt    int
 }
 
-func NewRollbackCmd() *cobra.Command {
+func NewRollbackCmd(logger *zap.Logger, etcdClient *clientv3.Client) *cobra.Command {
 	var rollbackOpts RollbackOptions
 
 	rollbackCmd := &cobra.Command{

@@ -13,5 +13,5 @@ type Catalog struct {
 
 // CatalogSource defines an interface for types that can read catalog data.
 type CatalogSource interface {
-	FetchData(appName, appGroup string) (CatalogItem, error)
+	FetchData(appName, appGroup string) (*CatalogItem, error)
 }

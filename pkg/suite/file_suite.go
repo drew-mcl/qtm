@@ -1,18 +1,20 @@
 package suite
 
 import (
+	"errors"
 	"os"
 
 	"gopkg.in/yaml.v2"
 )
 
-type FileDataSource struct {
+type FileSource struct {
 	SuiteName string
 	Filename  string
+	suite     Suite
 }
 
-func (fds *FileDataSource) FetchSuite() (*Suite, error) {
-	data, err := os.ReadFile(fds.Filename)
+func NewFileSuiteSource(filePath string) (*FileSource, error) {
+	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -22,5 +24,15 @@ func (fds *FileDataSource) FetchSuite() (*Suite, error) {
 		return nil, err
 	}
 
-	return &suite, nil
+	return &FileSource{
+		suite: suite,
+	}, nil
+
+}
+
+func (fds *FileSource) FetchSuite() (Suite, error) {
+	if fds.suite.Name == fds.SuiteName {
+		return fds.suite, nil
+	}
+	return Suite{}, errors.New("suite not found")
 }

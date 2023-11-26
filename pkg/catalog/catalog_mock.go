@@ -32,15 +32,15 @@ func WithVersionNotFoundError() MockCatalogOption {
 
 type MockCatalog struct {
 	items      map[string]CatalogItem // Maps app names to their catalog items
-	lookupFunc func(string) (CatalogItem, error)
+	lookupFunc func(string) (*CatalogItem, error)
 }
 
-func NewMockCatalog(opts ...MockCatalogOption) *MockCatalog {
+func NewMockCatalogSource(opts ...MockCatalogOption) *MockCatalog {
 	mc := &MockCatalog{
 		items: make(map[string]CatalogItem),
 	}
 
-	mc.lookupFunc = func(appName string) (CatalogItem, error) {
+	mc.lookupFunc = func(appName string) (*CatalogItem, error) {
 		return mc.normalLookup(appName) // default behavior
 	}
 
@@ -56,25 +56,25 @@ func NewMockCatalog(opts ...MockCatalogOption) *MockCatalog {
 	return mc
 }
 
-func (mc *MockCatalog) FetchData(appName, appGroup string) (CatalogItem, error) {
+func (mc *MockCatalog) FetchData(appName, appGroup string) (*CatalogItem, error) {
 	return mc.lookupFunc(appName)
 }
 
-func (mc *MockCatalog) normalLookup(appName string) (CatalogItem, error) {
+func (mc *MockCatalog) normalLookup(appName string) (*CatalogItem, error) {
 	if item, ok := mc.items[appName]; ok {
-		return item, nil
+		return &item, nil
 	}
-	return CatalogItem{}, errors.New("item not found")
+	return nil, errors.New("item not found")
 }
 
-func (mc *MockCatalog) catalogNotFoundLookup(appName string) (CatalogItem, error) {
-	return CatalogItem{}, errors.New("catalog not found")
+func (mc *MockCatalog) catalogNotFoundLookup(appName string) (*CatalogItem, error) {
+	return nil, errors.New("catalog not found")
 }
 
-func (mc *MockCatalog) itemNotFoundLookup(appName string) (CatalogItem, error) {
-	return CatalogItem{}, errors.New("item not found")
+func (mc *MockCatalog) itemNotFoundLookup(appName string) (*CatalogItem, error) {
+	return nil, errors.New("item not found")
 }
 
-func (mc *MockCatalog) versionNotFoundLookup(appName string) (CatalogItem, error) {
-	return CatalogItem{}, errors.New("version not found")
+func (mc *MockCatalog) versionNotFoundLookup(appName string) (*CatalogItem, error) {
+	return nil, errors.New("version not found")
 }

@@ -22,7 +22,7 @@ type MockSuite struct {
 	fetchDataFunc func() (Suite, error)
 }
 
-func NewMockSuite(opts ...MockSuiteOption) *MockSuite {
+func NewMockSuiteSource(opts ...MockSuiteOption) *MockSuite {
 	ms := &MockSuite{
 		fetchDataFunc: fetchDataNormal,
 	}
@@ -32,7 +32,7 @@ func NewMockSuite(opts ...MockSuiteOption) *MockSuite {
 	return ms
 }
 
-func (ms *MockSuite) FetchData() (Suite, error) {
+func (ms *MockSuite) FetchSuite() (Suite, error) {
 	return ms.fetchDataFunc()
 }
 

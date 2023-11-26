@@ -13,7 +13,7 @@ type Suite struct {
 	Items []SuiteItem `yaml:",inline"`
 }
 
-type DataSource interface {
+type SuiteSource interface {
 	FetchSuite() (Suite, error)
 }
 

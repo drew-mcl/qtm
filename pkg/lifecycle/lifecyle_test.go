@@ -25,19 +25,17 @@ func TestAllAppsSucceed(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalog(), 0)
+	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
 	rollbacker := rollback.NewMockRollbacker(logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	dataSource := suite.NewMockSuite()
-	flatSuite, err := dataSource.FetchData()
+	s, err := deployer.FetchSuite()
 	if err != nil {
-		fmt.Println("Error reading data:", err)
-		os.Exit(1)
+		t.Error("Error fetching suite:", err)
 	}
 
-	suite := suite.OrganizeSuiteData(flatSuite)
+	suite := suite.OrganizeSuiteData(s)
 
 	// Use the new DeployAllPhases signature with suiteData
 	success := DeployAllPhases(ctx, deployer, rollbacker, suite, DefaultDecisionMaker, false, logger)
@@ -56,25 +54,21 @@ func TestNonCriticalFailure(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalog(), 0)
-
-	deployer.SetDeploymentResult("app2", 2, deployment.DeploymentResult{Status: deployment.Fail})
-	rollbacker := rollback.NewMockRollbacker(logger)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	decisionMaker := func(phase int, phaseSuccess bool) bool {
 		return true // Always continue to the next phase, regardless of success
 	}
 
-	dataSource := suite.NewMockSuite()
-	flatSuite, err := dataSource.FetchData()
+	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
+	rollbacker := rollback.NewMockRollbacker(logger)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s, err := deployer.FetchSuite()
 	if err != nil {
-		fmt.Println("Error reading data:", err)
-		os.Exit(1)
+		t.Error("Error fetching suite:", err)
 	}
 
-	suite := suite.OrganizeSuiteData(flatSuite)
+	suite := suite.OrganizeSuiteData(s)
 
 	success := DeployAllPhases(ctx, deployer, rollbacker, suite, decisionMaker, false, logger)
 	if !success {
@@ -92,25 +86,21 @@ func TestHaltOnFailure(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalog(), 0)
-
-	deployer.SetDeploymentResult("app2", 2, deployment.DeploymentResult{Status: deployment.Fail})
-	rollbacker := rollback.NewMockRollbacker(logger)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	decisionMaker := func(phase int, phaseSuccess bool) bool {
 		return phaseSuccess // Stop if the phase fails
 	}
 
-	dataSource := suite.NewMockSuite()
-	flatSuite, err := dataSource.FetchData()
+	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
+	rollbacker := rollback.NewMockRollbacker(logger)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s, err := deployer.FetchSuite()
 	if err != nil {
-		fmt.Println("Error reading data:", err)
-		os.Exit(1)
+		t.Error("Error fetching suite:", err)
 	}
 
-	suite := suite.OrganizeSuiteData(flatSuite)
+	suite := suite.OrganizeSuiteData(s)
 
 	success := DeployAllPhases(ctx, deployer, rollbacker, suite, decisionMaker, false, logger)
 	if success {
@@ -129,25 +119,21 @@ func TestRollbackCurrentPhase(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalog(), 0)
-
-	deployer.SetDeploymentResult("app2", 2, deployment.DeploymentResult{Status: deployment.Fail})
-	rollbacker := rollback.NewMockRollbacker(logger)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	decisionMaker := func(phase int, phaseSuccess bool) bool {
 		return phaseSuccess // Stop if the phase fails
 	}
 
-	dataSource := suite.NewMockSuite()
-	flatSuite, err := dataSource.FetchData()
+	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
+	rollbacker := rollback.NewMockRollbacker(logger)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s, err := deployer.FetchSuite()
 	if err != nil {
-		fmt.Println("Error reading data:", err)
-		os.Exit(1)
+		t.Error("Error fetching suite:", err)
 	}
 
-	suite := suite.OrganizeSuiteData(flatSuite)
+	suite := suite.OrganizeSuiteData(s)
 
 	DeployAllPhases(ctx, deployer, rollbacker, suite, decisionMaker, false, logger)
 
@@ -176,25 +162,21 @@ func TestRollbackAllPhases(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalog(), 0)
-
-	deployer.SetDeploymentResult("app2", 2, deployment.DeploymentResult{Status: deployment.Fail})
-	rollbacker := rollback.NewMockRollbacker(logger)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
 	decisionMaker := func(phase int, phaseSuccess bool) bool {
 		return phaseSuccess // Stop if the phase fails
 	}
 
-	dataSource := suite.NewMockSuite()
-	flatSuite, err := dataSource.FetchData()
+	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
+	rollbacker := rollback.NewMockRollbacker(logger)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	s, err := deployer.FetchSuite()
 	if err != nil {
-		fmt.Println("Error reading data:", err)
-		os.Exit(1)
+		t.Error("Error fetching suite:", err)
 	}
 
-	suite := suite.OrganizeSuiteData(flatSuite)
+	suite := suite.OrganizeSuiteData(s)
 
 	DeployAllPhases(ctx, deployer, rollbacker, suite, decisionMaker, true, logger)
 
@@ -222,19 +204,17 @@ func TestImmediateCancellation(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalog(), 3)
+	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 3)
 	rollbacker := rollback.NewMockRollbacker(logger)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	dataSource := suite.NewMockSuite()
-	flatSuite, err := dataSource.FetchData()
+	s, err := deployer.FetchSuite()
 	if err != nil {
-		fmt.Println("Error reading data:", err)
-		os.Exit(1)
+		t.Error("Error fetching suite:", err)
 	}
 
-	suite := suite.OrganizeSuiteData(flatSuite)
-
+	suite := suite.OrganizeSuiteData(s)
 	// Start the deployment process in a separate goroutine
 	go func() {
 		DeployAllPhases(ctx, deployer, rollbacker, suite, DefaultDecisionMaker, false, logger)
@@ -260,19 +240,17 @@ func TestCancellationWithRollback(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalog(), 3)
+	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 3)
 	rollbacker := rollback.NewMockRollbacker(logger)
-
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	dataSource := suite.NewMockSuite()
-	flatSuite, err := dataSource.FetchData()
+	s, err := deployer.FetchSuite()
 	if err != nil {
-		fmt.Println("Error reading data:", err)
-		os.Exit(1)
+		t.Error("Error fetching suite:", err)
 	}
 
-	suite := suite.OrganizeSuiteData(flatSuite)
+	suite := suite.OrganizeSuiteData(s)
 
 	// Start the deployment process in a separate goroutine
 	go func() {
