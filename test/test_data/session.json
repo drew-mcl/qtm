@@ -12,8 +12,8 @@
         }
     },
     "endpoints": {
-        "my-endpoint": "address",
-        "my-endpoint": "address"
+        "my-endpoint1": "address",
+        "my-endpoint2": "address"
     },
     "configChanges": [
         {

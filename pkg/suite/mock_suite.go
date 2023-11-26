@@ -40,15 +40,15 @@ func fetchDataNormal() (Suite, error) {
 	return Suite{
 		Name: "mock",
 		Items: []SuiteItem{
-			{Name: "app1", Group: "test", RolloutPhase: 1},
-			{Name: "app2", Group: "test", RolloutPhase: 1},
-			{Name: "app3", Group: "test", RolloutPhase: 1},
-			{Name: "app1", Group: "test", RolloutPhase: 2},
-			{Name: "app2", Group: "test", RolloutPhase: 2},
-			{Name: "app3", Group: "test", RolloutPhase: 2},
-			{Name: "app1", Group: "test", RolloutPhase: 3},
-			{Name: "app2", Group: "test", RolloutPhase: 3},
-			{Name: "app3", Group: "test", RolloutPhase: 3},
+			{Name: "app1-phase1", Group: "test", RolloutPhase: 1},
+			{Name: "app2-phase1", Group: "test", RolloutPhase: 1},
+			{Name: "app3-phase1", Group: "test", RolloutPhase: 1},
+			{Name: "app1-phase2", Group: "test", RolloutPhase: 2},
+			{Name: "app2-phase2", Group: "test", RolloutPhase: 2},
+			{Name: "app3-phase2", Group: "test", RolloutPhase: 2},
+			{Name: "app1-phase3", Group: "test", RolloutPhase: 3},
+			{Name: "app2-phase3", Group: "test", RolloutPhase: 3},
+			{Name: "app3-phase3", Group: "test", RolloutPhase: 3},
 		},
 	}, nil
 }

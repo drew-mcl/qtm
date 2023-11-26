@@ -74,6 +74,15 @@ func runRollout(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Lo
 		os.Exit(1)
 	}
 
+	// Create or fetch session
+	sessionManager := deployer.GetSessionManager()
+	sessionID := opts.Session
+	if sessionID == "" {
+		sessionManager.NewSession()
+	}
+	sessionManager.SetSessionID(sessionID)
+	logger.Info("Session created", zap.String("sessionID", sessionID))
+
 	// Fetch data using deployer's suite source
 	suiteSource := deployer.GetSuiteSource()
 	s, err := suiteSource.FetchSuite()
@@ -120,7 +129,7 @@ func initializeDeployer(opts RolloutOptions, etcdClient *clientv3.Client, logger
 	if opts.UseMockData {
 		catalogSource = catalog.NewMockCatalogSource()
 		suiteSource = suite.NewMockSuiteSource()
-		sessionManager = session.NewMockSessionManager()
+		sessionManager = session.NewMockSessionManager(logger)
 	} else {
 		if opts.suiteFile != "" {
 			suiteSource, err = suite.NewFileSuiteSource(opts.suiteFile)

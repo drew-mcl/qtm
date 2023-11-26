@@ -45,9 +45,15 @@ func NewMockCatalogSource(opts ...MockCatalogOption) *MockCatalog {
 	}
 
 	// Add some mock data to mc.items
-	mc.items["app1"] = CatalogItem{Name: "app1", Version: "1.1.1", HelmChart: "mychartfrommock-1.0.0.tgz"}
-	mc.items["app2"] = CatalogItem{Name: "app2", Version: "2.2.2", HelmChart: "mychartfrommock-1.0.0.tgz"}
-	mc.items["app3"] = CatalogItem{Name: "app3", Version: "3.3.3", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app1-phase1"] = CatalogItem{Name: "app1-phase1", Version: "1.1.1", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app2-phase1"] = CatalogItem{Name: "app2-phase1", Version: "1.1.1", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app3-phase1"] = CatalogItem{Name: "app3-phase1", Version: "1.1.1", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app1-phase2"] = CatalogItem{Name: "app1-phase2", Version: "1.1.1", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app2-phase2"] = CatalogItem{Name: "app2-phase2", Version: "2.2.2", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app3-phase2"] = CatalogItem{Name: "app3-phase2", Version: "3.3.3", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app1-phase3"] = CatalogItem{Name: "app1-phase3", Version: "1.1.1", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app2-phase3"] = CatalogItem{Name: "app2-phase3", Version: "2.2.2", HelmChart: "mychartfrommock-1.0.0.tgz"}
+	mc.items["app3-phase3"] = CatalogItem{Name: "app3-phase3", Version: "3.3.3", HelmChart: "mychartfrommock-1.0.0.tgz"}
 
 	for _, opt := range opts {
 		opt(mc)

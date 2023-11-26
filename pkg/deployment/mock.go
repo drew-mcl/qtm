@@ -47,49 +47,42 @@ func (m *MockDeployer) SetDeploymentResult(appID string, phase int, result Deplo
 }
 
 // Deploy simulates deploying an app in a phase
-func (m *MockDeployer) Deploy(ctx context.Context, appName string, appGroup string, phase int) DeploymentResult {
+func (m *MockDeployer) Deploy(ctx context.Context, app suite.SuiteItem, phase int) DeploymentResult {
 	m.mu.Lock()
-	if result, exists := m.checkPredefinedResult(appName, phase); exists {
+	if result, exists := m.checkPredefinedResult(app.Name, phase); exists {
 		m.mu.Unlock()
 		return result
 	}
 	m.mu.Unlock()
 
+	// Fetch version for the app
+	catalogSource := m.CatalogSourceHolder.GetCatalogSource()
+	data, err := catalogSource.FetchData(app.Name, app.Group)
+	if err != nil {
+		return DeploymentResult{AppID: app.Name, Phase: phase, Status: Fail, ErrorMsg: err.Error()}
+	}
+	m.logger.Info("Fetched deployment data", zap.String("appID", app.Name), zap.Int("phase", phase), zap.String("version", data.Version), zap.String("chart", data.HelmChart))
+
 	// Check for cancellation before starting deployment
 	if ctx.Err() != nil {
-		return DeploymentResult{AppID: appName, Phase: phase, Status: Fail, ErrorMsg: "Deployment cancelled"}
+		return DeploymentResult{AppID: app.Name, Phase: phase, Status: Fail, ErrorMsg: "Deployment cancelled"}
 	}
 
-	// Check if the app has already been deployed
-	//if m.deployedApps[appID] {
-	//	return DeploymentResult{AppID: appID, Phase: phase, Status: Success}
-	//}
-
-	// Fetch version for the app
-
-	catalogSource := m.CatalogSourceHolder.GetCatalogSource()
-	data, err := catalogSource.FetchData(appName, appGroup)
-	if err != nil {
-		return DeploymentResult{AppID: appName, Phase: phase, Status: Fail, ErrorMsg: err.Error()}
-	}
-	m.logger.Info("Fetched deployment data", zap.String("appID", appName), zap.Int("phase", phase), zap.String("version", data.Version), zap.String("chart", data.HelmChart))
-
-	m.logger.Info("Mocking deploy", zap.String("appID", appName), zap.Int("phase", phase), zap.String("version", data.Version), zap.String("chart", data.Name))
+	// Perform the actual deployment as part of this instantiation of the deployer
+	m.logger.Info("Mocking deploy", zap.String("appID", app.Name), zap.Int("phase", phase), zap.String("version", data.Version), zap.String("chart", data.Name))
 
 	// Check for predefined results first
-	if result, exists := m.checkPredefinedResult(appName, phase); exists {
+	if result, exists := m.checkPredefinedResult(app.Name, phase); exists {
 		return result
 	}
-
 	if m.sleep > 0 {
 		time.Sleep(time.Duration(m.sleep) * time.Second)
 	}
-	// Simulating the deployment action
-	m.logger.Info("Mock deploy completed", zap.String("appID", appName), zap.Int("phase", phase), zap.String("version", data.Version), zap.String("chart", data.HelmChart))
+	m.logger.Info("Mock deploy completed", zap.String("appID", app.Name), zap.Int("phase", phase), zap.String("version", data.Version), zap.String("chart", data.HelmChart))
 
 	// Default to success
-	m.deployedApps[appName] = true
-	return DeploymentResult{AppID: appName, Phase: phase, Status: Success}
+	m.deployedApps[app.Name] = true
+	return DeploymentResult{AppID: app.Name, Phase: phase, Status: Success}
 }
 
 func (m *MockDeployer) checkPredefinedResult(appID string, phase int) (DeploymentResult, bool) {

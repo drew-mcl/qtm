@@ -1,10 +1,11 @@
 package rollback
 
 import (
-	"fmt"
+	"context"
 	"qtm/pkg/session"
 	"qtm/pkg/suite"
 	"sync"
+	"time"
 
 	"go.uber.org/zap"
 )
@@ -18,6 +19,7 @@ type MockRollbacker struct {
 	RolledBackApps map[string]bool
 	session.SessionManagerHolder
 	suite.SuiteSourceHolder
+	sleep int
 }
 
 // NewMockRollbacker creates a new MockRollbacker instance
@@ -26,24 +28,35 @@ func NewMockRollbacker(logger *zap.Logger) *MockRollbacker {
 		rolledBack:     make(map[string]map[int]bool),
 		RolledBackApps: make(map[string]bool),
 		logger:         logger,
+		sleep:          0,
 	}
 }
 
 // Rollback simulates rolling back an app deployment
-func (m *MockRollbacker) Rollback(releaseName string, phase int) {
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
-	m.logger.Info("Performing rollback", zap.String("releaseName", releaseName), zap.Int("phase", phase))
-
-	if _, exists := m.rolledBack[releaseName]; !exists {
-		m.rolledBack[releaseName] = make(map[int]bool)
+func (m *MockRollbacker) Rollback(ctx context.Context, appName string, phase int, logger *zap.Logger) RollbackResult {
+	logger.Info("Performing mock rollback", zap.String("releaseName", appName), zap.Int("phase", phase))
+	if ctx.Err() != nil {
+		return RollbackResult{AppID: appName, Phase: phase, Status: RollbackFail, ErrorMsg: "Rollback cancelled"}
 	}
-	m.rolledBack[releaseName][phase] = true
-	m.RolledBackApps[releaseName] = true
+
+	if m.sleep > 0 {
+		time.Sleep(time.Duration(m.sleep) * time.Second)
+	}
+
+	if _, exists := m.rolledBack[appName]; !exists {
+		m.rolledBack[appName] = make(map[int]bool)
+	}
+
+	// Simulating the rollback action
+	m.mu.Lock()
+	m.rolledBack[appName][phase] = true
+	m.RolledBackApps[appName] = true
+	m.mu.Unlock()
 
 	// Simulate the rollback action
-	fmt.Printf("Rolling back app %s from phase %d\n", releaseName, phase)
+	logger.Info("Rolling back app", zap.String("releaseName", appName), zap.Int("phase", phase))
+	return RollbackResult{AppID: appName, Phase: phase, Status: RollbackSuccess}
+
 }
 
 // IsRolledBack checks if a specific app has been rolled back in a specific phase
