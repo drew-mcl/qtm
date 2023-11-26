@@ -51,3 +51,16 @@ func contains(slice []int, val int) bool {
 	}
 	return false
 }
+
+// SuiteSourceHolder holds a SuiteSource instance
+type SuiteSourceHolder struct {
+	Source SuiteSource
+}
+
+func (h *SuiteSourceHolder) SetSuiteSource(sc SuiteSource) {
+	h.Source = sc
+}
+
+func (h *SuiteSourceHolder) GetSuiteSource() SuiteSource {
+	return h.Source
+}

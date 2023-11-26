@@ -8,6 +8,7 @@ import (
 	"qtm/pkg/deployment"
 	"qtm/pkg/lifecycle"
 	"qtm/pkg/rollback"
+	"qtm/pkg/session"
 	"qtm/pkg/suite"
 
 	"github.com/spf13/cobra"
@@ -74,7 +75,8 @@ func runRollout(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Lo
 	}
 
 	// Fetch data using deployer's suite source
-	s, err := deployer.FetchSuite()
+	suiteSource := deployer.GetSuiteSource()
+	s, err := suiteSource.FetchSuite()
 	if err != nil {
 		fmt.Println("Error reading data:", err)
 		os.Exit(1)
@@ -112,11 +114,13 @@ func initializeDeployer(opts RolloutOptions, etcdClient *clientv3.Client, logger
 
 	var catalogSource catalog.CatalogSource
 	var suiteSource suite.SuiteSource
+	var sessionManager session.SessionManager
 	var err error
 
 	if opts.UseMockData {
 		catalogSource = catalog.NewMockCatalogSource()
 		suiteSource = suite.NewMockSuiteSource()
+		sessionManager = session.NewMockSessionManager()
 	} else {
 		if opts.suiteFile != "" {
 			suiteSource, err = suite.NewFileSuiteSource(opts.suiteFile)
@@ -138,11 +142,18 @@ func initializeDeployer(opts RolloutOptions, etcdClient *clientv3.Client, logger
 	}
 
 	// Initialize and configure MockDeployer or real deployer with appropriate sources
+	var deployer deployment.Deployer
 	if opts.DryRun {
-		return deployment.NewMockDeployer(logger, catalogSource, suiteSource, 0), nil
+		deployer = deployment.NewMockDeployer(logger, 0)
 	} else {
 		return nil, nil
 	}
+
+	deployer.SetSessionManager(sessionManager)
+	deployer.SetCatalogSource(catalogSource)
+	deployer.SetSuiteSource(suiteSource)
+
+	return deployer, nil
 }
 
 func initializeRollback(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Logger) (rollback.Rollbacker, error) {

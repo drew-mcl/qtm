@@ -2,6 +2,8 @@ package rollback
 
 import (
 	"fmt"
+	"qtm/pkg/session"
+	"qtm/pkg/suite"
 	"sync"
 
 	"go.uber.org/zap"
@@ -14,6 +16,8 @@ type MockRollbacker struct {
 	mu             sync.Mutex
 	logger         *zap.Logger
 	RolledBackApps map[string]bool
+	session.SessionManagerHolder
+	suite.SuiteSourceHolder
 }
 
 // NewMockRollbacker creates a new MockRollbacker instance

@@ -3,6 +3,7 @@ package deployment
 import (
 	"context"
 	"qtm/pkg/catalog"
+	"qtm/pkg/session"
 	"qtm/pkg/suite"
 	"sync"
 	"time"
@@ -12,24 +13,22 @@ import (
 
 // MockDeployer simulates the deployment process
 type MockDeployer struct {
-	// deploymentResults stores predefined results for specific app and phase combinations
-	deploymentResults map[string]map[int]DeploymentResult
-	mu                sync.Mutex
-	logger            *zap.Logger
-	deployedApps      map[string]bool
-	catalogSource     catalog.CatalogSource
-	suiteSource       suite.SuiteSource
-	sleep             int
+	deploymentResults            map[string]map[int]DeploymentResult // deploymentResults stores predefined results for specific app and phase combinations
+	mu                           sync.Mutex
+	logger                       *zap.Logger
+	deployedApps                 map[string]bool
+	sleep                        int
+	session.SessionManagerHolder // Embedded struct to hold the session manager
+	suite.SuiteSourceHolder
+	catalog.CatalogSourceHolder
 }
 
 // NewMockDeployer creates a new MockDeployer instance
-func NewMockDeployer(logger *zap.Logger, cs catalog.CatalogSource, ss suite.SuiteSource, sleep int) *MockDeployer {
+func NewMockDeployer(logger *zap.Logger, sleep int) *MockDeployer {
 	return &MockDeployer{
 		deploymentResults: make(map[string]map[int]DeploymentResult),
 		deployedApps:      make(map[string]bool),
 		logger:            logger,
-		catalogSource:     cs,
-		suiteSource:       ss,
 		sleep:             sleep,
 	}
 }
@@ -67,7 +66,9 @@ func (m *MockDeployer) Deploy(ctx context.Context, appName string, appGroup stri
 	//}
 
 	// Fetch version for the app
-	data, err := m.catalogSource.FetchData(appName, appGroup)
+
+	catalogSource := m.CatalogSourceHolder.GetCatalogSource()
+	data, err := catalogSource.FetchData(appName, appGroup)
 	if err != nil {
 		return DeploymentResult{AppID: appName, Phase: phase, Status: Fail, ErrorMsg: err.Error()}
 	}
@@ -100,7 +101,10 @@ func (m *MockDeployer) checkPredefinedResult(appID string, phase int) (Deploymen
 	return DeploymentResult{}, false
 }
 
-// FetchSuite returns the suite data
-func (m *MockDeployer) FetchSuite() (suite.Suite, error) {
-	return m.suiteSource.FetchSuite()
+// SetPredefinedResult sets a predefined result for a specific app and phase.
+func (m *MockDeployer) SetPredefinedResult(appName string, phase int, result DeploymentResult) {
+	if _, exists := m.deploymentResults[appName]; !exists {
+		m.deploymentResults[appName] = make(map[int]DeploymentResult)
+	}
+	m.deploymentResults[appName][phase] = result
 }

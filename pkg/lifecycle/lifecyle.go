@@ -24,6 +24,10 @@ func deployApp(ctx context.Context, deployer deployment.Deployer, appName string
 	}
 
 	result := deployer.Deploy(ctx, appName, appGroup, phase)
+	//if result.Status == deployment.Success {
+	// Assuming version and other details are part of the result
+	//	deployer.GetSessionManager().AddApp(appName, "1.0.0") // Add the app to the session
+	//}
 	results <- result
 }
 

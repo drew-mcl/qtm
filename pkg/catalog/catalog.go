@@ -15,3 +15,15 @@ type Catalog struct {
 type CatalogSource interface {
 	FetchData(appName, appGroup string) (*CatalogItem, error)
 }
+
+type CatalogSourceHolder struct {
+	Source CatalogSource
+}
+
+func (h *CatalogSourceHolder) SetCatalogSource(cs CatalogSource) {
+	h.Source = cs
+}
+
+func (h *CatalogSourceHolder) GetCatalogSource() CatalogSource {
+	return h.Source
+}

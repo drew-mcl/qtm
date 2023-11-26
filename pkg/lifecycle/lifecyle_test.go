@@ -7,6 +7,7 @@ import (
 	"qtm/pkg/catalog"
 	"qtm/pkg/deployment"
 	"qtm/pkg/rollback"
+	"qtm/pkg/session"
 	"qtm/pkg/suite"
 	"testing"
 	"time"
@@ -25,12 +26,18 @@ func TestAllAppsSucceed(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
+	deployer := deployment.NewMockDeployer(logger, 0)
 	rollbacker := rollback.NewMockRollbacker(logger)
+
+	deployer.SetSuiteSource(suite.NewMockSuiteSource())
+	deployer.SetCatalogSource(catalog.NewMockCatalogSource())
+	deployer.SetSessionManager(session.NewMockSessionManager())
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s, err := deployer.FetchSuite()
+	suiteSource := deployer.GetSuiteSource()
+	s, err := suiteSource.FetchSuite()
 	if err != nil {
 		t.Error("Error fetching suite:", err)
 	}
@@ -58,19 +65,30 @@ func TestNonCriticalFailure(t *testing.T) {
 		return true // Always continue to the next phase, regardless of success
 	}
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
-	rollbacker := rollback.NewMockRollbacker(logger)
+	deployer := deployment.NewMockDeployer(logger, 0)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s, err := deployer.FetchSuite()
+	deployer.SetSuiteSource(suite.NewMockSuiteSource())
+	deployer.SetCatalogSource(catalog.NewMockCatalogSource())
+	deployer.SetSessionManager(session.NewMockSessionManager())
+
+	suiteSource := deployer.GetSuiteSource()
+	s, err := suiteSource.FetchSuite()
 	if err != nil {
 		t.Error("Error fetching suite:", err)
 	}
 
+	deployer.SetPredefinedResult("app2", 2, deployment.DeploymentResult{
+		AppID:    "app2",
+		Phase:    2,
+		Status:   deployment.Fail,
+		ErrorMsg: "Simulated failure",
+	})
+
 	suite := suite.OrganizeSuiteData(s)
 
-	success := DeployAllPhases(ctx, deployer, rollbacker, suite, decisionMaker, false, logger)
+	success := DeployAllPhases(ctx, deployer, nil, suite, decisionMaker, false, logger)
 	if !success {
 		t.Errorf("Expected deployment to succeed despite non-critical failure")
 	}
@@ -90,15 +108,27 @@ func TestHaltOnFailure(t *testing.T) {
 		return phaseSuccess // Stop if the phase fails
 	}
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
+	deployer := deployment.NewMockDeployer(logger, 0)
 	rollbacker := rollback.NewMockRollbacker(logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s, err := deployer.FetchSuite()
+	deployer.SetSuiteSource(suite.NewMockSuiteSource())
+	deployer.SetCatalogSource(catalog.NewMockCatalogSource())
+	deployer.SetSessionManager(session.NewMockSessionManager())
+
+	suiteSource := deployer.GetSuiteSource()
+	s, err := suiteSource.FetchSuite()
 	if err != nil {
 		t.Error("Error fetching suite:", err)
 	}
+
+	deployer.SetPredefinedResult("app2", 2, deployment.DeploymentResult{
+		AppID:    "app2",
+		Phase:    2,
+		Status:   deployment.Fail,
+		ErrorMsg: "Simulated failure",
+	})
 
 	suite := suite.OrganizeSuiteData(s)
 
@@ -123,15 +153,27 @@ func TestRollbackCurrentPhase(t *testing.T) {
 		return phaseSuccess // Stop if the phase fails
 	}
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
+	deployer := deployment.NewMockDeployer(logger, 0)
 	rollbacker := rollback.NewMockRollbacker(logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s, err := deployer.FetchSuite()
+	deployer.SetSuiteSource(suite.NewMockSuiteSource())
+	deployer.SetCatalogSource(catalog.NewMockCatalogSource())
+	deployer.SetSessionManager(session.NewMockSessionManager())
+
+	suiteSource := deployer.GetSuiteSource()
+	s, err := suiteSource.FetchSuite()
 	if err != nil {
 		t.Error("Error fetching suite:", err)
 	}
+
+	deployer.SetPredefinedResult("app2", 2, deployment.DeploymentResult{
+		AppID:    "app2",
+		Phase:    2,
+		Status:   deployment.Fail,
+		ErrorMsg: "Simulated failure",
+	})
 
 	suite := suite.OrganizeSuiteData(s)
 
@@ -166,17 +208,28 @@ func TestRollbackAllPhases(t *testing.T) {
 		return phaseSuccess // Stop if the phase fails
 	}
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 0)
+	deployer := deployment.NewMockDeployer(logger, 0)
 	rollbacker := rollback.NewMockRollbacker(logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s, err := deployer.FetchSuite()
+	deployer.SetSuiteSource(suite.NewMockSuiteSource())
+	deployer.SetCatalogSource(catalog.NewMockCatalogSource())
+	deployer.SetSessionManager(session.NewMockSessionManager())
+
+	suiteSource := deployer.GetSuiteSource()
+	s, err := suiteSource.FetchSuite()
 	if err != nil {
 		t.Error("Error fetching suite:", err)
 	}
-
 	suite := suite.OrganizeSuiteData(s)
+
+	deployer.SetPredefinedResult("app2", 2, deployment.DeploymentResult{
+		AppID:    "app2",
+		Phase:    2,
+		Status:   deployment.Fail,
+		ErrorMsg: "Simulated failure",
+	})
 
 	DeployAllPhases(ctx, deployer, rollbacker, suite, decisionMaker, true, logger)
 
@@ -204,12 +257,17 @@ func TestImmediateCancellation(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 3)
+	deployer := deployment.NewMockDeployer(logger, 3)
 	rollbacker := rollback.NewMockRollbacker(logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s, err := deployer.FetchSuite()
+	deployer.SetSuiteSource(suite.NewMockSuiteSource())
+	deployer.SetCatalogSource(catalog.NewMockCatalogSource())
+	deployer.SetSessionManager(session.NewMockSessionManager())
+
+	suiteSource := deployer.GetSuiteSource()
+	s, err := suiteSource.FetchSuite()
 	if err != nil {
 		t.Error("Error fetching suite:", err)
 	}
@@ -240,12 +298,17 @@ func TestCancellationWithRollback(t *testing.T) {
 	}
 	defer logger.Sync()
 
-	deployer := deployment.NewMockDeployer(logger, catalog.NewMockCatalogSource(), suite.NewMockSuiteSource(), 3)
+	deployer := deployment.NewMockDeployer(logger, 3)
 	rollbacker := rollback.NewMockRollbacker(logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	s, err := deployer.FetchSuite()
+	deployer.SetSuiteSource(suite.NewMockSuiteSource())
+	deployer.SetCatalogSource(catalog.NewMockCatalogSource())
+	deployer.SetSessionManager(session.NewMockSessionManager())
+
+	suiteSource := deployer.GetSuiteSource()
+	s, err := suiteSource.FetchSuite()
 	if err != nil {
 		t.Error("Error fetching suite:", err)
 	}

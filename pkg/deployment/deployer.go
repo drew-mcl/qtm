@@ -2,6 +2,8 @@ package deployment
 
 import (
 	"context"
+	"qtm/pkg/catalog"
+	"qtm/pkg/session"
 	"qtm/pkg/suite"
 )
 
@@ -25,5 +27,10 @@ const (
 // Deployer defines the interface for deploying applications
 type Deployer interface {
 	Deploy(ctx context.Context, appName string, appGroup string, phase int) DeploymentResult
-	FetchSuite() (suite.Suite, error)
+	SetSessionManager(manager session.SessionManager)
+	GetSessionManager() session.SessionManager
+	SetCatalogSource(src catalog.CatalogSource)
+	GetCatalogSource() catalog.CatalogSource
+	SetSuiteSource(src suite.SuiteSource)
+	GetSuiteSource() suite.SuiteSource
 }
