@@ -47,7 +47,7 @@ func (m *MockDeployer) SetDeploymentResult(appID string, phase int, result Deplo
 }
 
 // Deploy simulates deploying an app in a phase
-func (m *MockDeployer) Deploy(ctx context.Context, app suite.SuiteItem, phase int) DeploymentResult {
+func (m *MockDeployer) Deploy(ctx context.Context, app suite.SuiteItem, data catalog.CatalogItem, phase int) DeploymentResult {
 	m.mu.Lock()
 	if result, exists := m.checkPredefinedResult(app.Name, phase); exists {
 		m.mu.Unlock()
@@ -55,17 +55,9 @@ func (m *MockDeployer) Deploy(ctx context.Context, app suite.SuiteItem, phase in
 	}
 	m.mu.Unlock()
 
-	// Fetch version for the app
-	catalogSource := m.CatalogSourceHolder.GetCatalogSource()
-	data, err := catalogSource.FetchData(app.Name, app.Group)
-	if err != nil {
-		return DeploymentResult{AppID: app.Name, Phase: phase, Status: Fail, ErrorMsg: err.Error()}
-	}
-	m.logger.Info("Fetched deployment data", zap.String("appID", app.Name), zap.Int("phase", phase), zap.String("version", data.Version), zap.String("chart", data.HelmChart))
-
 	// Check for cancellation before starting deployment
 	if ctx.Err() != nil {
-		return DeploymentResult{AppID: app.Name, Phase: phase, Status: Fail, ErrorMsg: "Deployment cancelled"}
+		return DeploymentResult{AppID: app.Name, Phase: phase, Status: Fail, ErrorMsg: ctx.Err().Error()}
 	}
 
 	// Perform the actual deployment as part of this instantiation of the deployer
@@ -78,6 +70,11 @@ func (m *MockDeployer) Deploy(ctx context.Context, app suite.SuiteItem, phase in
 	if m.sleep > 0 {
 		time.Sleep(time.Duration(m.sleep) * time.Second)
 	}
+
+	if ctx.Err() != nil {
+		return DeploymentResult{AppID: app.Name, Phase: phase, Status: Fail, ErrorMsg: ctx.Err().Error()}
+	}
+
 	m.logger.Info("Mock deploy completed", zap.String("appID", app.Name), zap.Int("phase", phase), zap.String("version", data.Version), zap.String("chart", data.HelmChart))
 
 	// Default to success

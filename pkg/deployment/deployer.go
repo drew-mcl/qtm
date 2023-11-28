@@ -26,7 +26,7 @@ const (
 
 // Deployer defines the interface for deploying applications
 type Deployer interface {
-	Deploy(ctx context.Context, app suite.SuiteItem, phase int) DeploymentResult
+	Deploy(ctx context.Context, app suite.SuiteItem, data catalog.CatalogItem, phase int) DeploymentResult
 	SetSessionManager(manager session.SessionManager)
 	GetSessionManager() session.SessionManager
 	SetCatalogSource(src catalog.CatalogSource)
@@ -42,12 +42,20 @@ func DeployApp(ctx context.Context, d Deployer, app suite.SuiteItem, phase int, 
 		return
 	}
 
+	// Fetch version and chart for the app from the catalog
+	catalogSource := d.GetCatalogSource()
+	data, err := catalogSource.FetchData(app.Name, app.Group)
+	if err != nil {
+		results <- DeploymentResult{AppID: app.Name, Phase: phase, Status: Fail, ErrorMsg: err.Error()}
+		return
+	}
+
 	// Perform the actual deployment as part of this instantiation of the deployer
-	result := d.Deploy(ctx, app, phase)
+	result := d.Deploy(ctx, app, *data, phase)
 
 	// Add the app to the session if the deployment was successful
 	if result.Status == Success {
-		d.GetSessionManager().AddApp(app.Name, "1.0.0", phase) // Add the app to the session
+		d.GetSessionManager().AddApp(app, data.Version) // Add the app to the session
 	}
 
 	// Send the result to the results channel

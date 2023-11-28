@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"fmt"
+	"qtm/pkg/suite"
 	"sync"
 
 	"go.uber.org/zap"
@@ -24,9 +25,10 @@ func NewMockSessionManager(l *zap.Logger) *MockSessionManager {
 	}
 }
 
-func (m *MockSessionManager) NewSession() {
+func (m *MockSessionManager) CreateSession() error {
 	m.logger.Info("Creating new session")
 	m.sessionID = "mock-session-id"
+	return nil
 }
 
 func (m *MockSessionManager) SetSessionID(sessionID string) {
@@ -93,7 +95,6 @@ func (m *MockSessionManager) UpdateAppDeploymentStatus(appName string, isDeploye
 	}
 
 	app := m.apps[appName]
-	app.IsDeployed = isDeployed
 	m.apps[appName] = app
 
 	return nil
@@ -118,15 +119,13 @@ func (m *MockSessionManager) GetEndpoints(sessionID string) (map[string]string, 
 	return m.endpoints, nil
 }
 
-func (m *MockSessionManager) AddApp(appName string, version string, rolloutPhase int) error {
-	m.logger.Info("Adding app", zap.String("appName", appName), zap.String("version", version))
+func (m *MockSessionManager) AddApp(app suite.SuiteItem, version string) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	m.apps[appName] = AppData{
-		Version:      version,
-		IsDeployed:   false,
-		RolloutPhase: 0,
+	m.apps[app.Name] = AppData{
+		version: version,
+		obj:     app,
 	}
 
 	return nil
@@ -160,7 +159,15 @@ func (m *MockSessionManager) GetAppVersion(appName string) (string, error) {
 	defer m.mu.Unlock()
 
 	if app, exists := m.apps[appName]; exists {
-		return app.Version, nil
+		return app.version, nil
 	}
 	return "", errors.New("app not found")
+}
+
+func (m *MockSessionManager) ValidateSession() (bool, error) {
+	return true, nil
+}
+
+func (m *MockSessionManager) CreateSessionID() (string, error) {
+	return "mock-session-id", nil
 }

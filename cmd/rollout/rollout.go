@@ -30,16 +30,20 @@ type RolloutOptions struct {
 	suiteFile   string
 	catalogFile string
 	local       bool
+	endpoint    string
+	NewSession  bool
 }
 
-func NewRolloutCmd(logger *zap.Logger, etcdClient *clientv3.Client) *cobra.Command {
+func NewRolloutCmd(ctx context.Context, etcdClient *clientv3.Client, logger *zap.Logger) *cobra.Command {
 	var rolloutOpts RolloutOptions
 
 	rolloutCmd := &cobra.Command{
 		Use:   "rollout",
 		Short: "Rollout a suite of deployments",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			runRollout(rolloutOpts, etcdClient, logger)
+			rolloutOpts.Suite = args[0]
+			runRollout(ctx, rolloutOpts, etcdClient, logger)
 		},
 	}
 
@@ -51,11 +55,15 @@ func NewRolloutCmd(logger *zap.Logger, etcdClient *clientv3.Client) *cobra.Comma
 	rolloutCmd.Flags().IntVar(&rolloutOpts.StartAt, "start-at", 0, "Defines which phase to start at")
 	rolloutCmd.Flags().BoolVar(&rolloutOpts.DryRun, "dry-run", false, "Perform a mock deployment without any real changes")
 	rolloutCmd.Flags().BoolVar(&rolloutOpts.UseMockData, "mock", false, "Use mock data for testing")
+	rolloutCmd.Flags().StringVar(&rolloutOpts.suiteFile, "suite-file", "", "Use local file to upload suite data")
+	rolloutCmd.Flags().StringVar(&rolloutOpts.catalogFile, "catalog-file", "", "Use local file to upload catalog data")
+	rolloutCmd.Flags().StringVar(&rolloutOpts.endpoint, "endpoint", "localhost:2379", "Etcd endpoint")
+	rolloutCmd.Flags().BoolVar(&rolloutOpts.NewSession, "new", false, "Indicates a new session should be created")
 
 	return rolloutCmd
 }
 
-func runRollout(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Logger) {
+func runRollout(ctx context.Context, opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Logger) {
 	// Your rollout logic here
 	fmt.Println("Rollout command executed")
 	fmt.Println("Session:", opts.Session)
@@ -68,7 +76,17 @@ func runRollout(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Lo
 	fmt.Println("DryRun:", opts.DryRun)
 	fmt.Println("UseMockData:", opts.UseMockData)
 
-	deployer, err := initializeDeployer(opts, etcdClient, logger)
+	sm, err := session.NewEtcdSessionManager([]string{opts.endpoint}, "qtm", "user")
+	if err != nil {
+		logger.Error("Error creating session manager", zap.Error(err))
+		os.Exit(1)
+	}
+
+	if sm == nil {
+		logger.Fatal("Session manager is nil, this should not happen")
+	}
+
+	deployer, err := initializeDeployer(opts, etcdClient, sm, logger)
 	if err != nil {
 		fmt.Println("Error initializing deployer:", err)
 		os.Exit(1)
@@ -76,11 +94,20 @@ func runRollout(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Lo
 
 	// Create or fetch session
 	sessionManager := deployer.GetSessionManager()
-	sessionID := opts.Session
-	if sessionID == "" {
-		sessionManager.NewSession()
+
+	sessionOpts := session.SessionOptions{
+		Session:    opts.Session,
+		NewSession: opts.NewSession,
 	}
+
+	sessionID, err := session.CreateOrFetchSession(logger, sessionManager, sessionOpts)
+	if err != nil {
+		fmt.Println("Error creating or fetching session:", err)
+		os.Exit(1)
+	}
+
 	sessionManager.SetSessionID(sessionID)
+	sessionManager.RegisterNewSession(sessionID)
 	logger.Info("Session created", zap.String("sessionID", sessionID))
 
 	// Fetch data using deployer's suite source
@@ -99,7 +126,7 @@ func runRollout(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Lo
 	rollbackRequired := opts.Atomic || opts.Nuclear
 	var rollbacker rollback.Rollbacker
 	if rollbackRequired {
-		rollbacker, err = initializeRollback(opts, etcdClient, logger)
+		rollbacker, err = initializeRollback(opts, etcdClient, sm, logger)
 		if err != nil {
 			fmt.Println("Error initializing rollbacker:", err)
 			os.Exit(1)
@@ -109,7 +136,6 @@ func runRollout(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Lo
 	}
 
 	// Deploy phases
-	ctx, _ := context.WithCancel(context.Background())
 	success := lifecycle.DeployAllPhases(ctx, deployer, rollbacker, suiteData, lifecycle.DefaultDecisionMaker, false, logger)
 
 	if success {
@@ -119,17 +145,15 @@ func runRollout(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Lo
 	}
 }
 
-func initializeDeployer(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Logger) (deployment.Deployer, error) {
+func initializeDeployer(opts RolloutOptions, etcdClient *clientv3.Client, sm session.SessionManager, logger *zap.Logger) (deployment.Deployer, error) {
 
 	var catalogSource catalog.CatalogSource
 	var suiteSource suite.SuiteSource
-	var sessionManager session.SessionManager
 	var err error
 
 	if opts.UseMockData {
 		catalogSource = catalog.NewMockCatalogSource()
 		suiteSource = suite.NewMockSuiteSource()
-		sessionManager = session.NewMockSessionManager(logger)
 	} else {
 		if opts.suiteFile != "" {
 			suiteSource, err = suite.NewFileSuiteSource(opts.suiteFile)
@@ -153,19 +177,19 @@ func initializeDeployer(opts RolloutOptions, etcdClient *clientv3.Client, logger
 	// Initialize and configure MockDeployer or real deployer with appropriate sources
 	var deployer deployment.Deployer
 	if opts.DryRun {
-		deployer = deployment.NewMockDeployer(logger, 0)
+		deployer = deployment.NewMockDeployer(logger, 5)
 	} else {
 		return nil, nil
 	}
 
-	deployer.SetSessionManager(sessionManager)
 	deployer.SetCatalogSource(catalogSource)
 	deployer.SetSuiteSource(suiteSource)
+	deployer.SetSessionManager(sm)
 
 	return deployer, nil
 }
 
-func initializeRollback(opts RolloutOptions, etcdClient *clientv3.Client, logger *zap.Logger) (rollback.Rollbacker, error) {
+func initializeRollback(opts RolloutOptions, etcdClient *clientv3.Client, sm session.SessionManager, logger *zap.Logger) (rollback.Rollbacker, error) {
 	var suiteSource suite.SuiteSource
 	var err error
 
@@ -182,12 +206,15 @@ func initializeRollback(opts RolloutOptions, etcdClient *clientv3.Client, logger
 		}
 	}
 
-	logger.Info("Suite data", zap.Any("suite", suiteSource))
-
-	// Initialize and configure MockDeployer or real deployer with appropriate sources
+	var rollbacker rollback.Rollbacker
 	if opts.DryRun {
-		return rollback.NewMockRollbacker(logger), nil
+		rollbacker = rollback.NewMockRollbacker(logger)
 	} else {
 		return nil, nil
 	}
+
+	rollbacker.SetSuiteSource(suiteSource)
+	rollbacker.SetSessionManager(sm)
+
+	return rollbacker, nil
 }

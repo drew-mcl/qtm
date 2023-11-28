@@ -42,6 +42,13 @@ func DeployAllPhases(ctx context.Context, deployer deployment.Deployer, rollback
 		phaseSuccess, successfulApps := processPhaseResults(results, logger)
 		phaseInfos[phase] = PhaseInfo{SuccessfulApps: successfulApps, IsSuccessful: phaseSuccess}
 
+		if ctx.Err() != nil {
+			// Context is canceled - perform rollback
+			rolbackCtx := context.Background()
+			RollbackPhase(rolbackCtx, rollbacker, phase, successfulApps, logger)
+			return false
+		}
+
 		logger.Info("Phase ended", zap.Int("phase", phase), zap.Any("overall", phaseInfos), zap.Bool("phaseSuccess", phaseSuccess))
 
 		if !decisionMaker(phase, phaseSuccess) {
@@ -49,10 +56,10 @@ func DeployAllPhases(ctx context.Context, deployer deployment.Deployer, rollback
 				logger.Info("Initiating rollback due to phase failure", zap.Int("phase", phase))
 				if rollbackEverything {
 					logger.Info("Rolling back all phases", zap.Int("phase", phase))
-					rollbackAllPhases(ctx, rollbacker, phaseInfos, phase, logger)
+					RollbackAllPhases(ctx, rollbacker, phaseInfos, phase, logger)
 				} else {
 					logger.Info("Rolling back single phase", zap.Int("phase", phase))
-					rollbackPhase(ctx, rollbacker, phase, successfulApps, logger)
+					RollbackPhase(ctx, rollbacker, phase, successfulApps, logger)
 				}
 			}
 			return false
@@ -63,7 +70,7 @@ func DeployAllPhases(ctx context.Context, deployer deployment.Deployer, rollback
 }
 
 // Implement rollbackPhase and rollbackAllPhases functions
-func rollbackPhase(ctx context.Context, rollbacker rollback.Rollbacker, phase int, apps []string, logger *zap.Logger) {
+func RollbackPhase(ctx context.Context, rollbacker rollback.Rollbacker, phase int, apps []string, logger *zap.Logger) {
 	logger.Info("Rolling back phase", zap.Int("phase", phase), zap.Any("apps", apps))
 	var wg sync.WaitGroup
 
@@ -89,9 +96,9 @@ func rollbackPhase(ctx context.Context, rollbacker rollback.Rollbacker, phase in
 }
 
 // rollbackAllPhases rolls back all phases up to and including the specified phase
-func rollbackAllPhases(ctx context.Context, rollbacker rollback.Rollbacker, phaseInfos map[int]PhaseInfo, upToPhase int, logger *zap.Logger) {
+func RollbackAllPhases(ctx context.Context, rollbacker rollback.Rollbacker, phaseInfos map[int]PhaseInfo, upToPhase int, logger *zap.Logger) {
 	logger.Info("Rolling back all phases", zap.Int("upToPhase", upToPhase))
-	for phase := 1; phase <= upToPhase; phase++ {
+	for phase := upToPhase; phase >= 0; phase-- {
 		info, exists := phaseInfos[phase]
 		if !exists {
 			continue // Skip if no information about the phase
@@ -141,4 +148,23 @@ func processPhaseResults(results chan deployment.DeploymentResult, logger *zap.L
 // defaultDecisionMaker is a default implementation of the decisionMaker function
 func DefaultDecisionMaker(phase int, phaseSuccess bool) bool {
 	return phaseSuccess // Continue only if the phase is successful
+}
+
+func CreatePhaseInfoFromSuite(s suite.Suite) map[int]PhaseInfo {
+	phaseData := suite.OrganizeSuiteData(s)
+	phaseInfos := make(map[int]PhaseInfo)
+
+	for phase, items := range phaseData {
+		var appNames []string
+		for _, item := range items {
+			appNames = append(appNames, item.Name)
+		}
+		phaseInfos[phase] = PhaseInfo{
+			SuccessfulApps: appNames,
+			// Assumption: Marking all as successful, needs adjustment based on actual deployment results
+			IsSuccessful: true,
+		}
+	}
+
+	return phaseInfos
 }
